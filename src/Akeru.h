@@ -1,11 +1,11 @@
 /* Akeru.h - v4 [2016.07.29]
- * 
+ *
  * Copyleft Snootlab 2016 - inspired by TD1208 lib by IoTHerd (C) 2016
  *
- * Akeru is a library for Sigfox TD1208 use with the Arduino platform. 
+ * Akeru is a library for Sigfox TD1208 use with the Arduino platform.
  * The library is designed to use SoftwareSerial library for serial communication between TD1208 module and Arduino.
  * Current library coverage is:
- *	 - AT command 
+ *	 - AT command
  *	 - Sigfox payload transfer
  *	 - TD1208 temperature read
  *	 - TD1208 ID read
@@ -27,7 +27,7 @@
 	#include <WProgram.h>
 #endif
 
-#include <SoftwareSerial.h>
+//#include <SoftwareSerial.h>
 
 #define ATOK "OK"
 #define ATCOMMAND "AT"
@@ -54,7 +54,7 @@
 class Akeru
 {
 	public:
-		Akeru(unsigned int rx, unsigned int tx);
+		Akeru();
 		void echoOn();
 		void echoOff();
 		bool begin();
@@ -82,7 +82,7 @@ class Akeru
 
 	private:
 		bool sendATCommand(const String command, const int timeout, String *dataOut);
-		SoftwareSerial* serialPort;
+
 		unsigned long _lastSend;
 		bool _cmdEcho = false;
 };

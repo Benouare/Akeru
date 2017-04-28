@@ -1,11 +1,13 @@
+
+
 /* Akeru.h - v4 [2016.07.29]
- * 
+ *
  * Copyleft Snootlab 2016 - inspired by TD1208 lib by IoTHerd (C) 2016
  *
- * Akeru is a library for Sigfox TD1208 use with the Arduino platform. 
+ * Akeru is a library for Sigfox TD1208 use with the Arduino platform.
  * The library is designed to use SoftwareSerial library for serial communication between TD1208 module and Arduino.
  * Current library coverage is:
- *	 - AT command 
+ *	 - AT command
  *	 - Sigfox payload transfer
  *	 - TD1208 temperature read
  *	 - TD1208 ID read
@@ -17,12 +19,20 @@
  *   - TD1208 downlink request
  *   - Data conversion in hexadecimal
  */
- 
+
+ #if ARDUINO >= 100
+ #include "Arduino.h"
+#else
+ #include "WProgram.h"
+#endif
+
+#include <Wire.h>
+
 #include "Akeru.h"
 
-Akeru::Akeru(unsigned int rx, unsigned int tx)
+Akeru::Akeru()
 {
-	serialPort = new SoftwareSerial(rx, tx);
+	Serial.begin(122345); // TODO
 	_lastSend = -1;
 }
 
@@ -41,7 +51,7 @@ bool Akeru::begin()
 	// Let the modem warm up a bit
 	delay(2000);
 	_lastSend = -1;
-	
+
 	// Check TD1208 communication
 	if (sendAT()) return true;
 	else return false;
@@ -67,7 +77,7 @@ bool Akeru::isReady()
 	// TO BE BLOCKED BY YOUR SIFGOX NETWORK OPERATOR.
 	//
 	// You've been warned!
-	
+
 	unsigned long currentTime = millis();
     if(currentTime >= _lastSend && (currentTime - _lastSend) <= 600000) return false;
 	else return true;
@@ -82,7 +92,7 @@ bool Akeru::sendAT()
 bool Akeru::sendPayload(const String payload)
 {
 	if (!isReady()) return false; // prevent user from sending to many messages
-	
+
 	String message = (String) ATSIGFOXTX + payload;
 
 	String data = "";
@@ -174,7 +184,7 @@ bool Akeru::getFirmware(String *firmware)
 }
 
 bool Akeru::getPower(int *power)
-{	
+{
 	String message = (String) ATPOWER + '?';
 	String data = "";
 	if (sendATCommand(message, ATCOMMAND_TIMEOUT, &data))
@@ -207,41 +217,41 @@ bool Akeru::setPower(int power)
 bool Akeru::receive(String *data)
 {
 	if (!isReady()) return false;
-	
+
 	if (sendATCommand(ATDOWNLINK, ATSIGFOXTX_TIMEOUT, data))
 	{
 		// Restart serial interface
-		serialPort->begin(9600);
-		delay(200);	
-		serialPort->flush();
-		serialPort->listen();
-		
-		// Read response 
+		Serial.begin(9600);
+		delay(200);
+		Serial.flush();
+		//Serial.read();
+
+		// Read response
 		String response = "";
-		
+
 		unsigned int startTime = millis();
 		volatile unsigned int currentTime = millis();
 		volatile char rxChar = '\0';
 
 		// RX management : two ways to break the loop
 		// - Timeout
-		// - Receive 
+		// - Receive
 		do
 		{
-			if (serialPort->available() > 0)
+			if (Serial.available() > 0)
 			{
-				rxChar = (char)serialPort->read();
+				rxChar = (char)Serial.read();
 				response.concat(rxChar);
 			}
 			currentTime = millis();
 		}while(((currentTime - startTime) < ATDOWNLINK_TIMEOUT) && response.endsWith(DOWNLINKEND) == false);
 
-		serialPort->end();
+		Serial.end();
 		if (_cmdEcho)
 		{
 			Serial.println(response);
 		}
-		
+
 		// Now that we have the full answer we can look for the received bytes
 		if (response.length() != 0)
 		{
@@ -258,7 +268,7 @@ bool Akeru::receive(String *data)
 			}
 		}
 	}
-	else 
+	else
 	{
 		return false;
 	}
@@ -267,7 +277,7 @@ bool Akeru::receive(String *data)
 String Akeru::toHex(int i)
 {
 	byte * b = (byte*) & i;
-	
+
 	String bytes = "";
 	for (int j=0; j<2; j++)
 	{
@@ -283,7 +293,7 @@ String Akeru::toHex(int i)
 String Akeru::toHex(unsigned int ui)
 {
 	byte * b = (byte*) & ui;
-	
+
 	String bytes = "";
 	for (int i=0; i<2; i++)
 	{
@@ -299,7 +309,7 @@ String Akeru::toHex(unsigned int ui)
 String Akeru::toHex(long l)
 {
 	byte * b = (byte*) & l;
-	
+
 	String bytes = "";
 	for (int i=0; i<4; i++)
 	{
@@ -315,7 +325,7 @@ String Akeru::toHex(long l)
 String Akeru::toHex(unsigned long ul)
 {
 	byte * b = (byte*) & ul;
-	
+
 	String bytes = "";
 	for (int i=0; i<4; i++)
 	{
@@ -363,7 +373,7 @@ String Akeru::toHex(double d)
 String Akeru::toHex(char c)
 {
 	byte *b = (byte*) & c;
-	
+
 	String bytes = "";
 	if (b[0] <= 0xF) // single char
 	{
@@ -376,7 +386,7 @@ String Akeru::toHex(char c)
 String Akeru::toHex(char *c, int length)
 {
 	byte * b = (byte*) c;
-	
+
 	String bytes = "";
 	for (int i=0; i<length; i++)
 	{
@@ -426,10 +436,10 @@ String Akeru::toHex(uint8_t c)
 bool Akeru::sendATCommand(const String command, const int timeout, String *dataOut)
 {
 	// Start serial interface
-	serialPort->begin(9600);
-	delay(200);	
-	serialPort->flush();
-	serialPort->listen();
+	Serial.begin(9600);
+	delay(200);
+	Serial.flush();
+	//Serial.listen();
 
 	// Add CRLF to the command
 	String ATCommand = "";
@@ -444,37 +454,37 @@ bool Akeru::sendATCommand(const String command, const int timeout, String *dataO
 	// Send the command : need to write/read char by char because of echo
 	for (int i = 0; i < ATCommand.length(); ++i)
 	{
-		serialPort->print(ATCommand.c_str()[i]);
-		serialPort->read();
+		Serial.print(ATCommand.c_str()[i]);
+		Serial.read();
 	}
 	if (_cmdEcho)
 	{
 		Serial.print("<< ");
 	}
-	
-	// Read response 
+
+	// Read response
 	String response = "";
-	
+
 	unsigned int startTime = millis();
 	volatile unsigned int currentTime = millis();
 	volatile char rxChar = '\0';
 
 	// RX management : two ways to break the loop
 	// - Timeout
-	// - Receive 
+	// - Receive
 	do
 	{
-		if (serialPort->available() > 0)
+		if (Serial.available() > 0)
 		{
-			rxChar = (char)serialPort->read();
+			rxChar = (char)Serial.read();
 			response.concat(rxChar);
 		}
 
 		currentTime = millis();
 	}while(((currentTime - startTime) < timeout) && response.endsWith(ATOK) == false);
 
-	serialPort->end();
-	
+	Serial.end();
+
 	if (_cmdEcho)
 	{
 		Serial.println(response);
@@ -503,9 +513,9 @@ bool Akeru::sendATCommand(const String command, const int timeout, String *dataO
 				String chunk = response.substring(previous+1, index);
 				if (chunk.length() > 0)
 				{
-					// Remove \r\n 
+					// Remove \r\n
 					chunk.replace("\r\n", "");
-					
+
 					if (firstData != "")
 					{
 						secondData = chunk;
@@ -524,7 +534,7 @@ bool Akeru::sendATCommand(const String command, const int timeout, String *dataO
 
 			// Increment index
 			if (index >= 0) index++;
-		
+
 		} while (index < response.length() && index >= 0);
 	}
 	else
