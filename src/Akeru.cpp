@@ -32,7 +32,7 @@
 
 Akeru::Akeru()
 {
-	Serial.begin(122345); // TODO
+	Serial1.begin(9600); // TODO
 	_lastSend = -1;
 }
 
